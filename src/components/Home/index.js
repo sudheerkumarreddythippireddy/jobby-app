@@ -1,5 +1,5 @@
 import './index.css'
-import {Link, withRouter} from 'react-router-dom'
+import {Link} from 'react-router-dom'
 import Header from '../Header'
 
 const Home = () => (

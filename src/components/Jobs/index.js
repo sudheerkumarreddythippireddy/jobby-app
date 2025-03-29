@@ -21,6 +21,14 @@ const salaryRangesList = [
   {salaryRangeId: '4000000', label: '40 LPA and above'},
 ]
 
+const locationsList = [
+  {locationId: 'DELHI', label: 'Delhi'},
+  {locationId: 'HYDERABAD', label: 'Hyderabad'},
+  {locationId: 'CHENNAI', label: 'Chennai'},
+  {locationId: 'MUMBAI', label: 'Mumbai'},
+  {locationId: 'BANGLORE', label: 'Banglore'},
+]
+
 class Jobs extends Component {
   state = {
     profileDetails: {},
@@ -28,6 +36,7 @@ class Jobs extends Component {
     searchInput: '',
     selectedEmploymentTypes: [],
     selectedSalaryRange: '',
+    selectedLocations: [],
     isLoading: true,
     isRetry: false,
     isJobsFailure: false,
@@ -40,11 +49,18 @@ class Jobs extends Component {
 
   getJobsDetails = async () => {
     const jwtToken = Cookies.get('jwt_token')
-    const {searchInput, selectedEmploymentTypes, selectedSalaryRange} =
-      this.state
+    const {
+      searchInput,
+      selectedEmploymentTypes,
+      selectedSalaryRange,
+      selectedLocations,
+    } = this.state
     const employmentFilter = selectedEmploymentTypes.join(',')
+    console.log(employmentFilter)
+    const locationFilter = selectedLocations.join(',')
+    console.log(locationFilter)
 
-    const url = `https://api.ccbp.in/jobs?search=${searchInput}&employment_type=${employmentFilter}&minimum_package=${selectedSalaryRange}`
+    const url = `https://apis.ccbp.in/jobs?search=${searchInput}&employment_type=${employmentFilter}&minimum_package=${selectedSalaryRange}&location=${locationFilter}`
     const options = {
       headers: {Authorization: `Bearer ${jwtToken}`},
       method: 'GET',
@@ -52,6 +68,7 @@ class Jobs extends Component {
 
     try {
       const response = await fetch(url, options)
+      console.log(response)
       if (response.ok) {
         const data = await response.json()
         const formattedJobs = data.jobs.map(job => ({
@@ -107,9 +124,7 @@ class Jobs extends Component {
   }
 
   onEmploymentTypeChange = event => {
-    const {selectedEmploymentTypes} = this.state
     const {value, checked} = event.target
-
     if (checked) {
       this.setState(
         prevState => ({
@@ -124,6 +139,27 @@ class Jobs extends Component {
       this.setState(
         prevState => ({
           selectedEmploymentTypes: prevState.selectedEmploymentTypes.filter(
+            type => type !== value,
+          ),
+        }),
+        this.getJobsDetails,
+      )
+    }
+  }
+
+  onLocationChange = event => {
+    const {value, checked} = event.target
+    if (checked) {
+      this.setState(
+        prevState => ({
+          selectedLocations: [...prevState.selectedLocations, value],
+        }),
+        this.getJobsDetails,
+      )
+    } else {
+      this.setState(
+        prevState => ({
+          selectedLocations: prevState.selectedLocations.filter(
             type => type !== value,
           ),
         }),
@@ -188,15 +224,69 @@ class Jobs extends Component {
     </div>
   )
 
+  renderJobListings = () => {
+    const {isLoading, isJobsFailure, jobsList} = this.state
+
+    if (isLoading) {
+      return (
+        <div className="loader-container" data-testid="loader">
+          <Loader type="ThreeDots" color="#ffffff" height="50" width="50" />
+        </div>
+      )
+    }
+
+    if (isJobsFailure) {
+      return this.renderFailureJobsView()
+    }
+
+    if (jobsList.length === 0) {
+      return this.renderNoJobsView()
+    }
+
+    return (
+      <ul className="job-card-list">
+        {jobsList.map(job => (
+          <Link key={job.id} to={`/jobs/${job.id}`} className="job-card-link">
+            <li className="job-card" key={job.id}>
+              <div className="logo-container">
+                <img
+                  className="job-logo"
+                  src={job.companyLogoUrl}
+                  alt="company logo"
+                />
+                <div className="name-container">
+                  <h1 className="job-company-name">{job.title}</h1>
+                  <div className="rating-container">
+                    <BsStarFill className="star-icon" />
+                    <p className="job-rating">{job.rating}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="location-container">
+                <div className="icons-container">
+                  <div className="job-location-container">
+                    <MdLocationOn className="icon" />
+                    <p className="job-location">{job.location}</p>
+                  </div>
+                  <div className="job-internship-container">
+                    <BsFillBriefcaseFill className="icon" />
+                    <p className="job-internship">{job.employmentType}</p>
+                  </div>
+                </div>
+                <p className="job-package">{job.packagePerAnnum}</p>
+              </div>
+              <hr />
+              <h3 className="job-description-title">Description</h3>
+              <p className="job-description">{job.jobDescription}</p>
+            </li>
+          </Link>
+        ))}
+      </ul>
+    )
+  }
+
   render() {
-    const {
-      profileDetails,
-      jobsList,
-      searchInput,
-      isLoading,
-      isRetry,
-      isJobsFailure,
-    } = this.state
+    const {profileDetails, searchInput, isRetry} = this.state
     const {name, profileImageUrl, shortBio} = profileDetails
 
     return (
@@ -260,7 +350,7 @@ class Jobs extends Component {
             </div>
             <hr />
 
-            {/* 💰 Salary Range Filters */}
+            {/* Salary Range Filters */}
             <div className="salary-container">
               <h1 className="type-heading">Salary Range</h1>
               <ul className="type-list">
@@ -274,6 +364,26 @@ class Jobs extends Component {
                       onChange={this.onSalaryChange}
                     />
                     <label htmlFor={salary.salaryRangeId}>{salary.label}</label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <hr />
+            {/* Location Filters */}
+            <div className="locations-container">
+              <h1 className="location-heading">Locations</h1>
+              <ul className="location-list">
+                {locationsList.map(location => (
+                  <li key={location.locationId} className="location-item">
+                    <input
+                      type="checkbox"
+                      value={location.locationId}
+                      id={location.locationId}
+                      onChange={this.onLocationChange}
+                    />
+                    <label htmlFor={location.locationId}>
+                      {location.label}
+                    </label>
                   </li>
                 ))}
               </ul>
@@ -300,65 +410,7 @@ class Jobs extends Component {
                 </button>
               </div>
             </div>
-            {isLoading ? (
-              <div className="loader-container" data-testid="loader">
-                <Loader
-                  type="ThreeDots"
-                  color="#ffffff"
-                  height="50"
-                  width="50"
-                />
-              </div>
-            ) : isJobsFailure ? (
-              this.renderFailureJobsView()
-            ) : jobsList.length === 0 ? (
-              this.renderNoJobsView()
-            ) : (
-              <ul className="job-card-list">
-                {jobsList.map(job => (
-                  <Link
-                    key={job.id}
-                    to={`/jobs/${job.id}`}
-                    className="job-card-link"
-                  >
-                    <li className="job-card" key={job.id}>
-                      <div className="logo-container">
-                        <img
-                          className="job-logo"
-                          src={job.companyLogoUrl}
-                          alt="company logo"
-                        />
-                        <div className="name-container">
-                          <h1 className="job-company-name">{job.title}</h1>
-                          <div className="rating-container">
-                            <BsStarFill className="star-icon" />
-                            <p className="job-rating">{job.rating}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="location-container">
-                        <div className="icons-container">
-                          <div className="job-location-container">
-                            <MdLocationOn className="icon" />
-                            <p className="job-location">{job.location}</p>
-                          </div>
-                          <div className="job-internship-container">
-                            <BsFillBriefcaseFill className="icon" />
-                            <p className="job-internship">
-                              {job.employmentType}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="job-package">{job.packagePerAnnum}</p>
-                      </div>
-                      <hr />
-                      <h3 className="job-description-title">Description</h3>
-                      <p className="job-description">{job.jobDescription}</p>
-                    </li>
-                  </Link>
-                ))}
-              </ul>
-            )}
+            {this.renderJobListings()}
           </div>
         </div>
       </div>

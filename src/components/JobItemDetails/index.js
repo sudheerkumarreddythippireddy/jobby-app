@@ -6,7 +6,6 @@ import {
 } from 'react-icons/bs'
 import {MdLocationOn} from 'react-icons/md'
 import Cookies from 'js-cookie'
-import {Link} from 'react-router-dom'
 import './index.css'
 import Loader from 'react-loader-spinner'
 import Header from '../Header'
